@@ -14,7 +14,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like curl, Postman)
       if (!origin) return callback(null, true);
       if (allowedOrigins.indexOf(origin) === -1) {
         const msg =
@@ -31,11 +30,12 @@ app.use(
 app.use(express.json());
 
 app.post("/api/generate-password", async (req, res) => {
+  console.log("==== /api/generate-password endpoint hit ====");
   const { prompt } = req.body;
+  console.log("Prompt received:", prompt);
   const apiKey = process.env.GEMINI_API_KEY;
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   try {
-    console.log("Prompt:", prompt);
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -46,6 +46,7 @@ app.post("/api/generate-password", async (req, res) => {
     const data = await response.json();
     console.log("Gemini API response:", data);
     const password = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("Password to return:", password);
     res.json({ password });
   } catch (err) {
     console.error("Error from Gemini API:", err);
@@ -54,4 +55,5 @@ app.post("/api/generate-password", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+console.log("Server started and logging works!");
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
