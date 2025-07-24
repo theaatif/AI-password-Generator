@@ -1,0 +1,151 @@
+import React, { useState } from "react";
+import zxcvbn from "zxcvbn";
+import { calculateEntropy } from "../utils/entropyCalc";
+import EducationalPanel from "./EducationalPanel";
+import PasswordStrengthInfo from "./PasswordStrengthInfo";
+
+const charsetOptions = [
+  {
+    label: "Lowercase (a-z)",
+    value: "lowercase",
+    chars: "abcdefghijklmnopqrstuvwxyz",
+  },
+  {
+    label: "Uppercase (A-Z)",
+    value: "uppercase",
+    chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  },
+  { label: "Numbers (0-9)", value: "numbers", chars: "0123456789" },
+  {
+    label: "Symbols (!@#$...)",
+    value: "symbols",
+    chars: "!@#$%^&*()_+-=[]{}|;:,.<>/?",
+  },
+];
+
+const strengthLabels = ["Very Weak", "Weak", "Fair", "Strong", "Excellent"];
+
+function getCharPool(selected) {
+  return charsetOptions
+    .filter((opt) => selected[opt.value])
+    .map((opt) => opt.chars)
+    .join("");
+}
+
+const RandomPassword = () => {
+  const [length, setLength] = useState(12);
+  const [selected, setSelected] = useState({
+    lowercase: true,
+    uppercase: true,
+    numbers: true,
+    symbols: false,
+  });
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
+
+  const handleChange = (e) => {
+    setSelected({ ...selected, [e.target.name]: e.target.checked });
+  };
+
+  const generatePassword = () => {
+    const pool = getCharPool(selected);
+    if (!pool) return setPassword("");
+    let pwd = "";
+    for (let i = 0; i < length; i++) {
+      pwd += pool.charAt(Math.floor(Math.random() * pool.length));
+    }
+    setPassword(pwd);
+    setHasGenerated(true);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  const entropy = calculateEntropy(password);
+  const zxcvbnResult = zxcvbn(password);
+  const strength = zxcvbnResult.score;
+  const crackTime =
+    zxcvbnResult.crack_times_display.offline_slow_hashing_1e4_per_second;
+
+  return (
+    <div className="backdrop-blur-lg bg-white/60 border border-white/30 rounded-3xl shadow-2xl p-4 sm:p-8 max-w-md mx-4 sm:mx-auto transition-transform hover:scale-[1.025] hover:shadow-3xl mt-6 mb-8">
+      <h2 className="text-xl sm:text-2xl font-extrabold mb-4 text-blue-900 drop-shadow">
+        Random Password Generator
+      </h2>
+      <div className="mb-4">
+        <label className="block mb-1 font-medium text-blue-800">
+          Password Length: <span className="font-bold">{length}</span>
+        </label>
+        <input
+          type="range"
+          min={6}
+          max={32}
+          value={length}
+          onChange={(e) => setLength(Number(e.target.value))}
+          className="w-full accent-blue-600"
+        />
+      </div>
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {charsetOptions.map((opt) => (
+          <label
+            key={opt.value}
+            className="flex items-center space-x-2 text-blue-900"
+          >
+            <input
+              type="checkbox"
+              name={opt.value}
+              checked={selected[opt.value]}
+              onChange={handleChange}
+              className="accent-blue-600"
+            />
+            <span>{opt.label}</span>
+          </label>
+        ))}
+      </div>
+      <button
+        onClick={generatePassword}
+        className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-2 rounded-xl shadow font-semibold mb-4 hover:from-blue-700 hover:to-blue-500 transition text-base sm:text-lg"
+      >
+        {hasGenerated ? "Regenerate Password" : "Generate Password"}
+      </button>
+      {password && (
+        <div className="mb-2 rounded-xl bg-white/80 border border-white/40 shadow p-2 sm:p-3 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+          <input
+            type={show ? "text" : "password"}
+            value={password}
+            readOnly
+            className="w-full px-2 py-1 border rounded-xl bg-white/90 text-blue-900 font-mono text-base"
+          />
+          <div className="flex flex-row space-x-2 w-full sm:w-auto justify-end">
+            <button
+              onClick={() => setShow((s) => !s)}
+              className="px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition w-20"
+            >
+              {show ? "Hide" : "Show"}
+            </button>
+            <button
+              onClick={handleCopy}
+              className="px-2 py-1 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition w-20"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+      {password && (
+        <PasswordStrengthInfo
+          password={password}
+          entropy={entropy}
+          zxcvbnResult={zxcvbnResult}
+        />
+      )}
+    </div>
+  );
+};
+
+export default RandomPassword;
